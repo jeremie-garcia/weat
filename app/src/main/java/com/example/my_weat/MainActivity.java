@@ -67,20 +67,14 @@ import java.util.Locale;
 
 public class MainActivity<url> extends AppCompatActivity {
 
-
-
-
-    private TextView  txtViewLatGPS, txtViewLongGPS, txtViewAltGPS;
-    private TextView txtViewLatNetwork, txtViewAltNetwork, txtViewLongNetwork;
-
-
     private LocationManager mLocationManagerGPS;
     private LocationListener mLocationListenerGPS;
-
     private LocationManager mLocationManagerNetwork;
     private LocationListener mLocationListenerNetwork;
 
     private JSONArray Globalarr;
+    private String strLatGPS, strLongGPS , strLatNetwork, strLongNetwork;
+
 
 
     //CAMERA
@@ -220,6 +214,8 @@ public class MainActivity<url> extends AppCompatActivity {
 
         getPositionGPS();
         getPositionNetwork();
+
+
 
 
         textureView = (TextureView) findViewById(R.id.texture);
@@ -382,20 +378,16 @@ public class MainActivity<url> extends AppCompatActivity {
 
         mLocationListenerGPS = new LocationListener() {
             public void onLocationChanged(Location location) {
-                txtViewLatGPS.setText(Double.toString(location.getLatitude()));
-                txtViewLongGPS.setText(Double.toString(location.getLongitude()));
-                txtViewAltGPS.setText(Double.toString(location.getAltitude()));
+                strLatGPS = Double.toString(location.getLatitude());
+                strLongGPS = Double.toString(location.getLongitude());
 
-                // Attention on fait la requete à chaque changement de localisation.
-                getWETHEAR(txtViewLatGPS.getText().toString(), txtViewLongGPS.getText().toString());
+                getWETHEAR(strLatGPS, strLongGPS);
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
             }
-
             public void onProviderEnabled(String provider) {
             }
-
             public void onProviderDisabled(String provider) {
                 showAlert(R.string.GPS_disabled);
             }
@@ -417,11 +409,12 @@ public class MainActivity<url> extends AppCompatActivity {
         mLocationManagerNetwork = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         mLocationListenerNetwork = new LocationListener() {
             public void onLocationChanged(Location location) {
-                txtViewLatNetwork.setText(Double.toString(location.getLatitude()));
-                txtViewLongNetwork.setText(Double.toString(location.getLongitude()));
-                txtViewAltNetwork.setText(Double.toString(location.getAltitude()));
 
-                getWETHEAR(txtViewLatNetwork.getText().toString(), txtViewLongNetwork.getText().toString());
+                strLatNetwork = Double.toString(location.getLatitude());
+                strLongNetwork = Double.toString(location.getLongitude());
+
+                getWETHEAR(strLatNetwork, strLongNetwork);
+
 
             }
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -437,7 +430,6 @@ public class MainActivity<url> extends AppCompatActivity {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 requestLocationPermission();
             } else {
-                //btnNetwork.setEnabled(false);
                 mLocationManagerNetwork.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 200, mLocationListenerNetwork);
             }
         }
@@ -450,18 +442,13 @@ public class MainActivity<url> extends AppCompatActivity {
         String url = String.format("https://api.openweathermap.org/data/2.5/onecall?lat=%s&lon=%s&exclude=current,minutely,hourly&appid=%s&lang=fr&units=metric"
                 ,lat_URL, long_URL, "f5bd199759b2f5803c1a5f0d31b5a436");
 
-        // creating a new variable for our request queue
         RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
 
-        // in below line we are making a json object
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
                 try {
-
-
                     Globalarr = response.getJSONArray("daily");
-
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -531,12 +518,9 @@ public class MainActivity<url> extends AppCompatActivity {
             mLocationManagerGPS.removeUpdates(mLocationListenerGPS);
         }
 
+        Log.d(TAG, "onPause");
 
-
-
-        Log.e(TAG, "onPause");
-
-        //closeCamera();
+        closeCamera();
         stopBackgroundThread();
         super.onPause();
 
@@ -558,20 +542,14 @@ public class MainActivity<url> extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        Log.e(TAG, "onResume");
+        Log.d(TAG, "onResume");
         startBackgroundThread();
         if (textureView.isAvailable()) {
             openCamera();
         } else {
             textureView.setSurfaceTextureListener(textureListener);
         }
-
-
-
-
     }
-
-
 
 
 }
