@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -73,15 +75,18 @@ public class MainActivity<url> extends AppCompatActivity {
     private LocationListener mLocationListenerNetwork;
 
     private JSONArray Globalarr;
+    private JSONArray displayArray;
+
     private String strLatGPS, strLongGPS , strLatNetwork, strLongNetwork;
+    private TextView txtViewCloud, txtViewWndSpd, txtViewWndDir;
 
+    private ImageView imageViewWeather;
 
-
-    //CAMERA
     private static final String TAG = "AndroidCameraApi";
     private Button takePictureButton;
     private TextureView textureView;
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -118,49 +123,49 @@ public class MainActivity<url> extends AppCompatActivity {
         //Initialize slider
         Slider slider = findViewById(R.id.discreteSlider);
 
+        txtViewCloud = findViewById(R.id.cloudstextView);
+        txtViewWndSpd = findViewById(R.id.wndSpdView);
+        txtViewWndDir = findViewById(R.id.wndDirView);
 
+        imageViewWeather = (ImageView) findViewById(R.id.displayWeather);
 
 
 
         slider.addOnChangeListener(new Slider.OnChangeListener() {
             @Override
             public void onValueChange(@NonNull Slider slider, float value, boolean fromUser) {
-                //Use the value
-                if (value == 0.0f) {
-                    String test = null;
-                    try {
-                        test = Globalarr.getJSONObject(0).getString("wind_speed");
-                    } catch (NullPointerException | JSONException e) {
-                        Log.d("SLIDER", "ERREUR");
+                for (int i =0;i<8;i++) {
+                    float j = (float) i;
+
+                    if (value == j) {
+                        String test = null;
+                        String strwinddeg = null;
+                        String strCloud = null;
+
+                        String numIcon = null;
+
+                        try {
+                            test = Globalarr.getJSONObject(i).getString("wind_speed");
+                            strwinddeg = Globalarr.getJSONObject(i).getString("wind_deg");
+                            strCloud = Globalarr.getJSONObject(i).getString("clouds");
+
+
+                            displayArray = Globalarr.getJSONObject(i).getJSONArray("weather");
+                            numIcon = displayArray.getJSONObject(0).getString("icon");
+
+
+                            txtViewWndSpd.setText(test);
+                            txtViewWndDir.setText(strwinddeg);
+                            txtViewCloud.setText(strCloud);
+
+
+                            displayWheather(numIcon);
+
+                        } catch (NullPointerException | JSONException e) {
+                            Log.d("SLIDER", "ERREUR");
+                        }
                     }
-
                 }
-                if (value == 1.0f) {
-                    Log.d("SLIDER", "SLIDER 1");
-                }
-                if (value == 2.0f) {
-                    Log.d("SLIDER", "SLIDER 2");
-                }
-                if (value == 3.0f) {
-                    Log.d("SLIDER", "SLIDER 3");
-                }
-                if (value == 4.0f) {
-                    Log.d("SLIDER", "SLIDER 4");
-                }
-                if (value == 5.0f) {
-                    Log.d("SLIDER", "SLIDER 5");
-                }
-                if (value == 6.0f) {
-                    Log.d("SLIDER", "SLIDER 6");
-                }
-                if (value == 7.0f) {
-                    Log.d("SLIDER", "SLIDER 7");
-                }
-
-                if (value == 8.0f) {
-                    Log.d("SLIDER", "SLIDER 9");
-                }
-
             }
         });
 
@@ -507,6 +512,49 @@ public class MainActivity<url> extends AppCompatActivity {
                     dialog.cancel();
                 }
             }).show();
+        }
+    }
+
+
+    private void displayWheather(String numIcon){
+
+        Log.d("SWITCH", numIcon);
+       //imageViewWeather.setImageResource(getDrawable(R.drawable.broken_clouds));
+
+
+        switch(numIcon)
+        {
+
+            case "01d":
+                imageViewWeather.setImageResource(R.drawable.soleil);
+                break;
+            case "02d":
+                imageViewWeather.setImageResource(R.drawable.few_clouds);
+                break;
+            case "03d":
+                imageViewWeather.setImageResource(R.drawable.scattered_clouds);
+                break;
+            case "04d":
+                imageViewWeather.setImageResource(R.drawable.broken_clouds);
+                break;
+            case "09d":
+                imageViewWeather.setImageResource(R.drawable.shower_rain);
+                break;
+            case "10d":
+                imageViewWeather.setImageResource(R.drawable.rain);
+                break;
+            case "11d":
+                imageViewWeather.setImageResource(R.drawable.thunderstorm);
+                break;
+            case "13d":
+                imageViewWeather.setImageResource(R.drawable.snow);
+                break;
+            case "50d":
+                imageViewWeather.setImageResource(R.drawable.mist);
+                break;
+
+            default:
+                Log.d("TEST", "no match");
         }
     }
 
