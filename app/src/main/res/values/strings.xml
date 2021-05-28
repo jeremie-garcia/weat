@@ -1,24 +1,14 @@
 <resources>
-<string name="app_name">WEAT</string>
-<string name="btn_loc_gps">Get GPS Location</string>
+    <string name="app_name">My Application</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
 
-<string name="btn_loc_net">Get Location by Network</string>
-<string name="txt_view_lat">Latitude:</string>
-<string name="txt_view_lon">Longitude:</string>
-<string name="txt_view_alt">Altitude:</string>
-
-<string name="GPS_permissions">You must accept the permissions to use the application</string>
-<string name="btn_watch_permissions">Watch Permissions</string>
-<string name="btn_close">Close</string>
-
-<string name="GPS_disabled">It seems that your GPS is disabled, do you want to activate it?</string>
-<string name="Network_disabled">It seems that your connection is disabled, do you want to activate it?</string>
-<string name="btn_yes">Yes</string>
-<string name="btn_no">No</string>
-
-<string name="txt_gps_panel"> Position GPS </string>
-<string name="txt_net_panel"> Position NET </string>
-<string name="txt_data"> DATA</string>
-
+    <string name="menu_home">Home</string>
+    <string name="menu_gallery">Gallery</string>
+    <string name="menu_slideshow">Slideshow</string>
 
 </resources>
