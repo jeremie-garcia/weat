@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'com.google.ar.sceneform.plugin'
 }
 
 android {
@@ -8,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.my_weat"
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
@@ -30,12 +31,15 @@ android {
 
 dependencies {
 
-    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.3.0'
     implementation 'com.google.android.material:material:1.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 
+
     implementation 'com.android.volley:volley:1.1.1'
     implementation 'com.squareup.picasso:picasso:2.71828'
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.1.0'
+
 
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
@@ -48,5 +52,21 @@ dependencies {
 
     //GPS
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Provides ARCore Session and related resources.
+    implementation 'com.google.ar:core:1.11.0'
+
+    // Provides ArFragment, and other UX resources.
+    implementation 'com.google.ar.sceneform.ux:sceneform-ux:1.15.0'
+
+    // Alternatively, use ArSceneView without the UX dependency.
+    implementation 'com.google.ar.sceneform:core:1.11.0'
 
 }
+
+//The following lines allows to generate the .sbf assets
+"""sceneform.asset('Sampledata/models/raincloud/model.obj',
+        'default',
+        'Sampledata/models/raincloud/model.sfa',
+        'src/main/assets/model')"""
