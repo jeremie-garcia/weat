@@ -5,6 +5,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -28,6 +31,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.Display;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -44,6 +48,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.PermissionChecker;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -53,6 +58,14 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.material.slider.LabelFormatter;
 import com.google.android.material.slider.Slider;
+import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.Camera;
+import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.Sun;
+import com.google.ar.sceneform.math.Quaternion;
+import com.google.ar.sceneform.math.Vector3;
+import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
@@ -61,8 +74,11 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 
 
 public class MainActivity<url> extends AppCompatActivity {
@@ -73,51 +89,45 @@ public class MainActivity<url> extends AppCompatActivity {
     private LocationListener mLocationListenerNetwork;
 
     private JSONArray Globalarr;
+    private JSONArray displayArray;
+    private JSONObject tempObject;
+
     private String strLatGPS, strLongGPS , strLatNetwork, strLongNetwork;
+    private TextView txtViewCloud, txtViewWndSpd, txtViewWndDir, txtViewTempMin, txtViewTempsMax;
+    private Scene scene;
+    private CustomArFragment fragment;
+    private Camera camera;
+    private Compass compass;
+    private float currentAzimuth;
 
-
-
-    //CAMERA
     private static final String TAG = "AndroidCameraApi";
-    private Button takePictureButton;
-    private TextureView textureView;
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-
-    static {
-        ORIENTATIONS.append(Surface.ROTATION_0, 90);
-        ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        ORIENTATIONS.append(Surface.ROTATION_180, 270);
-        ORIENTATIONS.append(Surface.ROTATION_270, 180);
-    }
-
-    private String cameraId;
-    protected CameraDevice cameraDevice;
-    protected CameraCaptureSession cameraCaptureSessions;
-    protected CaptureRequest captureRequest;
-    protected CaptureRequest.Builder captureRequestBuilder;
-
-    private Size imageDimension;
-    private ImageReader imageReader;
-    private File file;
     private static final int REQUEST_CAMERA_PERMISSION = 200;
-    private boolean mFlashSupported;
-    private Handler mBackgroundHandler;
-    private HandlerThread mBackgroundThread;
-
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
 
-
+        //Declaration of the AR fragment and setting up of the camera.
+        fragment = (CustomArFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+        scene = fragment.getArSceneView().getScene();
+        camera = scene.getCamera();
 
 
         //Initialize slider
         Slider slider = findViewById(R.id.discreteSlider);
 
+        //Initialize Textviews
+        txtViewCloud = findViewById(R.id.cloudstextView);
+        txtViewWndSpd = findViewById(R.id.wndSpdView);
+        txtViewWndDir = findViewById(R.id.wndDirView);
+        txtViewTempMin = findViewById(R.id.tempMinView);
+        txtViewTempsMax = findViewById(R.id.tempMaxView);
+
+        checkPermissions();
+        setupCompass();
 
 
 
@@ -125,42 +135,48 @@ public class MainActivity<url> extends AppCompatActivity {
         slider.addOnChangeListener(new Slider.OnChangeListener() {
             @Override
             public void onValueChange(@NonNull Slider slider, float value, boolean fromUser) {
-                //Use the value
-                if (value == 0.0f) {
-                    String test = null;
-                    try {
-                        test = Globalarr.getJSONObject(0).getString("wind_speed");
-                    } catch (NullPointerException | JSONException e) {
-                        Log.d("SLIDER", "ERREUR");
+
+                for (int i =0;i<8;i++) {
+                    float j = (float) i;
+
+                    if (value == j) {
+                        String test = null;
+                        String strwinddeg = null;
+                        String strCloud = null;
+                        String numIcon = null;
+                        String strminTemp = null;
+                        String strmaxTemp = null;
+
+
+
+                        try {
+                            //Parsing of the Globalarr that contains weather data
+                            test = Globalarr.getJSONObject(i).getString("wind_speed");
+                            strwinddeg = Globalarr.getJSONObject(i).getString("wind_deg");
+                            strCloud = Globalarr.getJSONObject(i).getString("clouds");
+
+
+                            displayArray = Globalarr.getJSONObject(i).getJSONArray("weather");
+                            numIcon = displayArray.getJSONObject(0).getString("icon");
+
+
+                            tempObject = Globalarr.getJSONObject(i).getJSONObject("temp");
+                            strminTemp = tempObject.getString("min");
+                            strmaxTemp = tempObject.getString("max");
+
+                            txtViewTempMin.setText(strminTemp);
+                            txtViewTempsMax.setText(strmaxTemp);
+                            txtViewWndSpd.setText(test);
+                            txtViewWndDir.setText(strwinddeg);
+                            txtViewCloud.setText(strCloud);
+
+                            displayWheather(numIcon);
+
+                        } catch (NullPointerException | JSONException e) {
+                            Log.d("SLIDER", "ERREUR");
+                        }
                     }
-
                 }
-                if (value == 1.0f) {
-                    Log.d("SLIDER", "SLIDER 1");
-                }
-                if (value == 2.0f) {
-                    Log.d("SLIDER", "SLIDER 2");
-                }
-                if (value == 3.0f) {
-                    Log.d("SLIDER", "SLIDER 3");
-                }
-                if (value == 4.0f) {
-                    Log.d("SLIDER", "SLIDER 4");
-                }
-                if (value == 5.0f) {
-                    Log.d("SLIDER", "SLIDER 5");
-                }
-                if (value == 6.0f) {
-                    Log.d("SLIDER", "SLIDER 6");
-                }
-                if (value == 7.0f) {
-                    Log.d("SLIDER", "SLIDER 7");
-                }
-
-                if (value == 8.0f) {
-                    Log.d("SLIDER", "SLIDER 9");
-                }
-
             }
         });
 
@@ -171,209 +187,40 @@ public class MainActivity<url> extends AppCompatActivity {
             @NonNull
             @Override
             public String getFormattedValue(float value) {
-
-
-                //It is just an example
                 if (value == 0.0f)
                     return "Today";
                 if (value == 1.0f)
                     return "Tomorrow";
 
                 for (int i =2;i<8;i++) {
-
-
                     float j = (float) i;
 
                     if (value == j) {
-
                         String test = null;
                          try {
                            test = Globalarr.getJSONObject(i).getString("dt");
                         } catch (NullPointerException | JSONException e) {
-                          Log.d("SLIDER", "ERREUR");
+                          //Log.d("SLIDER", "ERREUR");
                         }
-
-
-
                         long value1 = Long.parseLong(test);
                         java.util.Date time = new java.util.Date((long) value1 * 1000);
                         String day = new SimpleDateFormat("EEEE dd", Locale.US).format(time);
                         return (day);
                     }
-
-
                 }
-
-
-
                 return ("ERROR");
             }
         });
 
-
-
         getPositionGPS();
         getPositionNetwork();
-
-
-
-
-        textureView = (TextureView) findViewById(R.id.texture);
-        assert textureView != null;
-        textureView.setSurfaceTextureListener(textureListener);
-
-
     }
-
-
-    TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            //open your camera here
-            openCamera();
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-            // Transform you image captured size according to the surface width and height
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-            return false;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        }
-    };
-
-
-    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(CameraDevice camera) {
-            //This is called when the camera is open
-            Log.e(TAG, "onOpened");
-            cameraDevice = camera;
-            createCameraPreview();
-        }
-
-        @Override
-        public void onDisconnected(CameraDevice camera) {
-            cameraDevice.close();
-        }
-
-        @Override
-        public void onError(CameraDevice camera, int error) {
-            cameraDevice.close();
-            cameraDevice = null;
-        }
-    };
-    final CameraCaptureSession.CaptureCallback captureCallbackListener = new CameraCaptureSession.CaptureCallback() {
-        @Override
-        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-            super.onCaptureCompleted(session, request, result);
-            Toast.makeText(MainActivity.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
-            createCameraPreview();
-        }
-    };
-
-    protected void startBackgroundThread() {
-        mBackgroundThread = new HandlerThread("Camera Background");
-        mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-    }
-
-    protected void stopBackgroundThread() {
-        mBackgroundThread.quitSafely();
-        try {
-            mBackgroundThread.join();
-            mBackgroundThread = null;
-            mBackgroundHandler = null;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    protected void createCameraPreview() {
-        try {
-            SurfaceTexture texture = textureView.getSurfaceTexture();
-            assert texture != null;
-            texture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());
-            Surface surface = new Surface(texture);
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            captureRequestBuilder.addTarget(surface);
-            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    //The camera is already closed
-                    if (null == cameraDevice) {
-                        return;
-                    }
-                    // When the session is ready, we start displaying the preview.
-                    cameraCaptureSessions = cameraCaptureSession;
-                    updatePreview();
-                }
-
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    Toast.makeText(MainActivity.this, "Configuration change", Toast.LENGTH_SHORT).show();
-                }
-            }, null);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void openCamera() {
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        Log.e(TAG, "is camera open");
-        try {
-            cameraId = manager.getCameraIdList()[0];
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
-            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            assert map != null;
-            imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
-            // Add permission for camera and let user grant the permission
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
-                return;
-            }
-            manager.openCamera(cameraId, stateCallback, null);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-        Log.e(TAG, "openCamera X");
-    }
-
-    protected void updatePreview() {
-        if (null == cameraDevice) {
-            Log.e(TAG, "updatePreview error, return");
-        }
-        captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-        try {
-            cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void closeCamera() {
-        if (null != cameraDevice) {
-            cameraDevice.close();
-            cameraDevice = null;
-        }
-        if (null != imageReader) {
-            imageReader.close();
-            imageReader = null;
-        }
-    }
-
 
 
 
     private void getPositionGPS() {
+
+        //This function is a void, it calls the function getWEATHER at the current GPS location  each 5 seconds.
         mLocationManagerGPS = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
         mLocationListenerGPS = new LocationListener() {
@@ -397,7 +244,6 @@ public class MainActivity<url> extends AppCompatActivity {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 requestLocationPermission();
             } else {
-               // btnGPS.setEnabled(false);
                 mLocationManagerGPS.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, mLocationListenerGPS);
             }
         }
@@ -406,6 +252,7 @@ public class MainActivity<url> extends AppCompatActivity {
 
 
     private void getPositionNetwork() {
+        ////This function is a void, it calls the function getWEATHER at the current Network location  each 5 seconds.
         mLocationManagerNetwork = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         mLocationListenerNetwork = new LocationListener() {
             public void onLocationChanged(Location location) {
@@ -438,6 +285,8 @@ public class MainActivity<url> extends AppCompatActivity {
 
 
     private void getWETHEAR(String lat_URL, String long_URL) {
+        //Void that make a request to OPENWEATHER to get the data.
+        //Inputs : String lattitude, String longitude
 
         String url = String.format("https://api.openweathermap.org/data/2.5/onecall?lat=%s&lon=%s&exclude=current,minutely,hourly&appid=%s&lang=fr&units=metric"
                 ,lat_URL, long_URL, "f5bd199759b2f5803c1a5f0d31b5a436");
@@ -483,6 +332,21 @@ public class MainActivity<url> extends AppCompatActivity {
     }
 
 
+
+    private void checkPermissions() {
+        //This void check if all the permissions are granted in the androidManifest file.
+        int permission1 = PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        int permission2 = PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
+        if (permission1 == PermissionChecker.PERMISSION_GRANTED || permission2 == PermissionChecker.PERMISSION_GRANTED) {
+            //good to go
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    1);
+        }
+    }
+
+
     private void requestLocationPermission() {
         if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
             final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -510,25 +374,271 @@ public class MainActivity<url> extends AppCompatActivity {
         }
     }
 
+
+    private void displayWheather(String numIcon){
+        // This function display the 3D objects coresponding to the weather.
+        //The input is the Icon number of the weather icon of the openweather website.
+
+        switch(numIcon)
+        {
+
+            case "01d": //ClearSky
+                cleanAllnodes();
+
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("sun.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            // node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 0;
+                            float y = 1;
+                            float z = 0;
+
+                            Vector3 position = new Vector3( x, y, -4 );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 200));
+                            scene.addChild(node);
+                            displayWIND();
+                        });
+
+
+                break;
+
+            case "02d"://Fewclouds
+                cleanAllnodes();
+
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("sun.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            // node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = -1;
+                            float y = 1;
+                            float z = 0;
+
+                            Vector3 position = new Vector3( x, y, -4 );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 200));
+                            scene.addChild(node);
+
+                        });
+
+
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("cloud_02.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Vector3 scale = new Vector3( 1f, 1f,1f);
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 1;
+                            float y = 1;
+                            float z = 4;
+
+                            Vector3 position = new Vector3( x, y, -z );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 0));
+                            scene.addChild(node);
+                            displayWIND();
+
+                        });
+                break;
+
+
+            case "03d": //Scattered cloud
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("cloud_02.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Vector3 scale = new Vector3( 1f, 1f,1f);
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 0;
+                            float y = 1;
+                            float z = 4;
+
+                            Vector3 position = new Vector3( x, y, -z );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 0));
+                            scene.addChild(node);
+                            displayWIND();
+                        });
+
+                break;
+
+            case "04d": //broken clouds
+                cleanAllnodes();
+
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("cloud_02.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Vector3 scale = new Vector3( 1f, 1f,1f);
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 0;
+                            float y = 1;
+                            float z = 4;
+
+                            Vector3 position = new Vector3( x, y, -z );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 0));
+                            scene.addChild(node);
+
+
+
+
+                        });
+
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("cloud_02.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Vector3 scale = new Vector3( 1f, 1f,1f);
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 2;
+                            float y = 0;
+                            float z = 4;
+
+                            Vector3 position = new Vector3( x, y, -z );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 0));
+                            scene.addChild(node);
+                            displayWIND();
+
+                        });
+                break;
+
+
+            case "09d": //Shower Rain
+            case "10d":
+                cleanAllnodes();
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("model.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            // node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 0;
+                            float y = 0;
+                            float z = 0;
+
+                            Vector3 position = new Vector3( x, y, -2 );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 200));
+                            scene.addChild(node);
+                            displayWIND();
+                        });
+                break;
+
+
+            case "11d": // Thunderstorm
+                cleanAllnodes();
+
+                ModelRenderable.builder()
+                        .setSource(this, Uri.parse("lightning_bolt.sfb"))
+                        .build()
+                        .thenAccept(modelRenderable -> {
+
+
+                            Node node = new Node();
+                            node.setRenderable(modelRenderable);
+                            // node.setLocalScale(scale);
+                            Random random = new Random();
+                            float x = 0;
+                            float y = 0;
+                            float z = 0;
+
+                            Vector3 position = new Vector3( x, y, -5 );
+                            Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                            node.setWorldPosition(position);
+                            node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 1f, 0), 200));
+                            scene.addChild(node);
+                            displayWIND();
+
+                        });
+
+
+                break;
+
+            case "13d"://Snow
+                cleanAllnodes();
+                break;
+
+            case "50d":
+                cleanAllnodes();
+
+                break;
+
+            default:
+                Log.d("TEST", "no match");
+        }
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
-
+        compass.stop();
         if (mLocationManagerGPS != null) {
             mLocationManagerGPS.removeUpdates(mLocationListenerGPS);
         }
-
         Log.d(TAG, "onPause");
-
-        closeCamera();
-        stopBackgroundThread();
         super.onPause();
-
     }
 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
                 // close the app
@@ -541,14 +651,128 @@ public class MainActivity<url> extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
+        compass.start();
         Log.d(TAG, "onResume");
-        startBackgroundThread();
-        if (textureView.isAvailable()) {
-            openCamera();
-        } else {
-            textureView.setSurfaceTextureListener(textureListener);
+
+    }
+
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, "stop compass");
+        compass.stop();
+    }
+
+
+    private void cleanAllnodes(){
+        //This void delete
+        List<Node> children = new ArrayList<>(fragment.getArSceneView().getScene().getChildren());
+        for (Node node : children) {
+            if (node instanceof AnchorNode) {
+                if (((AnchorNode) node).getAnchor() != null) {
+                    ((AnchorNode) node).getAnchor().detach();
+                }
+            }
+            if (!(node instanceof Camera) && !(node instanceof Sun)) {
+                node.setParent(null);
+            }
         }
+    }
+
+    private void display3dNode(Uri uri, Vector3 scale, int j) {
+
+        Node node = new Node();
+
+        for(int i=0;i<j;i++){
+
+                Random random = new Random();
+
+                float x = random.nextInt(8) - 4f;
+                float y = random.nextInt(2) + 1;
+                float z = random.nextInt(6) + 2;
+
+                Vector3 position = new Vector3(x, y, -z - 5f);
+
+
+                ModelRenderable.builder()
+                    .setSource(this, uri)
+                    .build()
+                    .thenAccept(modelRenderable -> {
+
+
+
+                        node.setRenderable(modelRenderable);
+                        node.setLocalScale(scale);
+
+                        Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                        node.setWorldPosition(position);
+                        node.setLocalRotation(Quaternion.axisAngle(new Vector3(0, 2f, 0), 0));
+                        scene.addChild(node);
+
+                    });
+        }
+
+    }
+
+    private void displayWIND() {
+
+        ModelRenderable.builder()
+                .setSource(this, Uri.parse("arrow.sfb"))
+                .build()
+                .thenAccept(modelRenderable -> {
+
+                    Vector3 scale = new Vector3(0.5f, 0.5F, 0.5f);
+                    Node node = new Node();
+                    node.setRenderable(modelRenderable);
+                    node.setLocalScale(scale);
+                    Random random = new Random();
+                    float x = 1;
+                    float y = -1;
+                    float z = 0;
+
+                    Vector3 position = new Vector3(x, y, -10);
+                    Vector3 worldPosition = scene.getCamera().getWorldPosition();
+
+                    node.setWorldPosition(position);
+                    int direction = Integer.parseInt((String) txtViewWndDir.getText());
+
+                    int currentAzimuthInt = (int) currentAzimuth;
+                    //Log.d("DEBUG", String.valueOf(currentAzimuth)+"VALEURE RECUP");
+
+
+                    int affichageDegreeVent;
+
+                    if (direction - currentAzimuthInt < 0) {
+                        affichageDegreeVent = direction - currentAzimuthInt +360 ;
+                    }
+                    else{
+                        affichageDegreeVent = direction - currentAzimuthInt;
+                    }
+
+
+                    node.setLocalRotation(Quaternion.axisAngle(new Vector3(0.0f, 1.0f, 0.0f), affichageDegreeVent+180f));
+                    scene.addChild(node);
+
+                });
+
+    }
+
+
+    private void setupCompass() {
+        Log.d("DEBUG","setupCompass");
+        compass = new Compass(this);
+        Compass.CompassListener cl = new Compass.CompassListener() {
+            @Override
+            public void onNewAzimuth(float azimuth) {
+                Log.d("DEBUG", String.valueOf(azimuth));
+                //txtViewTempMin.setText((int) azimuth);
+                currentAzimuth = azimuth;
+            }
+        };
+        compass.setListener(cl);
     }
 
 

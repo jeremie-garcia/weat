@@ -3,17 +3,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".HomeActivity">
+    tools:context=".MainActivity">
 
 
 
 
-    <TextureView
-        android:id="@+id/texture"
+
+
+
+
+    <fragment
+        android:id="@+id/fragment"
+        android:name="com.example.my_weat.CustomArFragment"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="0dp" />
 
-        android:layout_alignParentTop="true"/>
+
+
+
 
     <com.google.android.material.slider.Slider
         android:id="@+id/discreteSlider"
@@ -23,35 +32,120 @@
         android:value="1"
         android:valueFrom="0"
         android:valueTo="7"
-        app:layout_constraintBottom_toBottomOf="@+id/texture"
-        app:layout_constraintTop_toTopOf="@+id/texture"
-        app:layout_constraintVertical_bias="1.0"
-        tools:layout_editor_absoluteX="0dp" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/floatingActionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginBottom="72dp"
-        android:clickable="true"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_more" />
+        app:layout_constraintTop_toTopOf="@+id/fragment"
+        app:layout_constraintVertical_bias="0.976"
+        tools:layout_editor_absoluteX="0dp"
+        tools:ignore="MissingConstraints" />
 
 
+    <androidx.cardview.widget.CardView
+        android:layout_width="171dp"
+        android:layout_height="103dp"
+        android:backgroundTint="#80000000"
+        android:translationX="100dp"
+        android:translationY="200dp"
+        app:cardCornerRadius="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/discreteSlider"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/fragment"
+        app:layout_constraintTop_toTopOf="@+id/fragment">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="92dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textView15"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Clouds [%]"
+                    android:textColor="@color/white"
+                    android:textAlignment="center"/>
+
+                <TextView
+                    android:id="@+id/textView12"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Wind Spd [kt]"
+                    android:textColor="@color/white"
+                    android:textAlignment="center"/>
+
+                <TextView
+                    android:id="@+id/textView11"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Wind dir [°C]"
+                    android:textColor="@color/white"
+                    android:textAlignment="center"/>
+
+                <TextView
+                    android:id="@+id/textView13"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Temp Max [°C]"
+                    android:textColor="@color/white"
+                    android:textAlignment="center"/>
+
+                <TextView
+                    android:id="@+id/textView14"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Temp Min [°C]"
+                    android:textColor="@color/white"/>
+
+            </LinearLayout>
 
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/floatingActionButton2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:clickable="true"
-        app:rippleColor="@null"
-        app:backgroundTint="@null"
-        app:srcCompat="@android:drawable/ic_menu_mapmode"
-        tools:layout_editor_absoluteX="44dp"
-        tools:layout_editor_absoluteY="462dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/cloudstextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"/>
+
+                <TextView
+                    android:id="@+id/wndSpdView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"/>
+
+                <TextView
+                    android:id="@+id/wndDirView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"/>
+
+                <TextView
+                    android:id="@+id/tempMaxView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"/>
+
+                <TextView
+                    android:id="@+id/tempMinView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+
+
